@@ -1,4 +1,4 @@
-/** File:       tpm_read_pcr.c
+/** File:       tpm_extend_pcr.c
  ** Author:     Dongli Zhang
  ** Contact:    dongli.zhang0129@gmail.com
  **
