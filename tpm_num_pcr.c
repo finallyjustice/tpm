@@ -1,6 +1,6 @@
-/** File:		tpm_num_pcr.c
- ** Author:		Dongli Zhang
- ** Contact:	dongli.zhang0129@gmail.com
+/** File:       tpm_num_pcr.c
+ ** Author:     Dongli Zhang
+ ** Contact:    dongli.zhang0129@gmail.com
  **
  ** Copyright (C) Dongli Zhang 2013
  **

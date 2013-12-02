@@ -1,6 +1,6 @@
-/** File:		tpm_get_version.c
- ** Author:		Dongli Zhang
- ** Contact:	dongli.zhang0129@gmail.com
+/** File:       tpm_read_pcr.c
+ ** Author:     Dongli Zhang
+ ** Contact:    dongli.zhang0129@gmail.com
  **
  ** Copyright (C) Dongli Zhang 2013
  **
@@ -19,7 +19,7 @@
  ** Foundation, 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-/* compile: gcc tpm_get_version.c -o tpm_get_version -ltspi */
+/* compile: gcc tpm_read_pcr.c -o tpm_read_pcr -ltspi */
 
 #include <stdio.h>
 #include <unistd.h>
@@ -31,10 +31,6 @@
 #include <tss/tss_structs.h>
 #include <tss/tspi.h>
 #include <trousers/trousers.h>
-
-#include <string.h>
-#include <stdarg.h>
-#include <getopt.h>
 
 int logHex(int a_iLen, void *a_pData)
 {
@@ -62,13 +58,15 @@ int logHex(int a_iLen, void *a_pData)
 
 int main(int argc, char **argv)
 {
-	TSS_HCONTEXT			hContext = 0;
-	TSS_HTPM				hTpm;
-	TSS_RESULT				result;
-	BYTE					*pResult;
-	UINT32					lenResult;
-	UINT64					offset;
-	TPM_CAP_VERSION_INFO	versionInfo;
+	if(argc != 2)
+	{
+		printf("Usage: ./tpm_read_pcr [pcr_index]\n");
+		return 0;
+	}
+
+	TSS_HCONTEXT hContext;
+	TSS_RESULT result;
+	TSS_HTPM hTPM;
 
 	// Create context
 	result = Tspi_Context_Create(&hContext);
@@ -77,7 +75,7 @@ int main(int argc, char **argv)
 		printf("Tspi_Context_Create failed\n");
 		return 0;
 	}
-	
+
 	// Connect to context
 	result = Tspi_Context_Connect(hContext, NULL);
 	if(result != TSS_SUCCESS)
@@ -89,7 +87,7 @@ int main(int argc, char **argv)
 	}
 
 	// Retrieve TPM object of context
-	result = Tspi_Context_GetTpmObject(hContext, &hTpm);
+	result = Tspi_Context_GetTpmObject(hContext, &hTPM);
 	if(result != TSS_SUCCESS)
 	{
 		printf("Tspi_Context_GetTpmObject failed\n");
@@ -98,53 +96,20 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	result=Tspi_TPM_GetCapability(hTpm, TSS_TPMCAP_VERSION_VAL, 
-								0, NULL, 
-								&lenResult, 
-								&pResult);
+	UINT32 lenPcr;	//length of return value
+	BYTE   *valPcr; //return pcr value
+	result = Tspi_TPM_PcrRead(hTPM, atoi(argv[1]), &lenPcr, &valPcr);
 	if(result != TSS_SUCCESS)
 	{
-		printf("Tspi_TPM_GetCapability failed\n");
+		printf("Tspi_TPM_PcrRead failed\n");
 		Tspi_Context_FreeMemory(hContext, NULL);
 		Tspi_Context_Close(hContext);
 		return 0;
 	}
 
-	offset = 0;
-	result = Trspi_UnloadBlob_CAP_VERSION_INFO(&offset, pResult, &versionInfo);
-	if(result != TSS_SUCCESS)
-	{
-		printf("Trspi_UnloadBlob_CAP_VERSIOB_INFO failed\n");
-		Tspi_Context_FreeMemory(hContext, NULL);
-		Tspi_Context_Close(hContext);
-		return 0;
-	}
-
-	printf("  Chip Version:		%hhu.%hhu.%hhu.%hhu\n",
-			versionInfo.version.major, versionInfo.version.minor,
-			versionInfo.version.revMajor, versionInfo.version.revMinor);
-	printf("  Spec Level:		%hu\n", versionInfo.specLevel);
-	printf("  Errata Revision:	%hhu\n", versionInfo.errataRev);
-	printf("  TPM Vendor ID:	%c%c%c%c\n", 
-			versionInfo.tpmVendorID[0], versionInfo.tpmVendorID[1],
-			versionInfo.tpmVendorID[2], versionInfo.tpmVendorID[3]);
-
-	result = Tspi_TPM_GetCapability(hTpm, TSS_TPMCAP_VERSION, 
-								0, NULL,
-								&lenResult,
-								&pResult);
-	if(result != TSS_SUCCESS)
-	{
-		printf("Tspi_TPM_GetCapability failed\n");
-		Tspi_Context_FreeMemory(hContext, NULL);
-		Tspi_Context_Close(hContext);
-		return 0;
-	}
-
-	printf("  TPM Version:		");
-	logHex(lenResult, pResult);
+	printf("Pcr Value is: ");
+	logHex(lenPcr, valPcr);
 
 	Tspi_Context_FreeMemory(hContext, NULL);
 	Tspi_Context_Close(hContext);
-	return 1;
 }
